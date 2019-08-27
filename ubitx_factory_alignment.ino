@@ -4,9 +4,9 @@
  */
 
 void btnWaitForClick(){
-  while(!btnDown())
+  while(!btnDown(FBUTTON))
     active_delay(50);
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(50);
  active_delay(50);
 }
@@ -50,7 +50,7 @@ void factory_alignment(){
   setFrequency(3500000l);
   updateDisplay();
 
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
@@ -60,7 +60,7 @@ void factory_alignment(){
 
   setFrequency(7150000l);
   updateDisplay();
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
@@ -71,7 +71,7 @@ void factory_alignment(){
   isUSB = true;
   setFrequency(14000000l);
   updateDisplay();
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
@@ -81,7 +81,7 @@ void factory_alignment(){
 
   setFrequency(28000000l);
   updateDisplay();
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
@@ -94,4 +94,3 @@ void factory_alignment(){
   updateDisplay();  
   
 }
-

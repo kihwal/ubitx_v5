@@ -1,4 +1,4 @@
-  /**
+/**
  * This source file is under General Public License version 3.
  * 
  * This verision uses a built-in Si5351 library
@@ -72,12 +72,21 @@
  * ground and +5v lines available on the connector. This implments the tuning mechanism
  */
 
-#define ENC_A (A0)
-#define ENC_B (A1)
+
+// Originally, 2 was used for CW keying and 9 was for LCD. 8 is used for CW instead.
+// All LCD control lines were freed up aftet the I2C mod. 
+#define ENC_A (2)  // For interrupt
+#define ENC_B (9)  // on external int, this is read too.
+
+// New assignment
+#define BAND_UP (A0)  // up
+#define BAND_DN (A1)  // down
+#define TU_STEP (10)  // tuning step
+
 #define FBUTTON (A2)
 #define PTT   (A3)
 #define ANALOG_KEYER (A6)
-#define ANALOG_SPARE (A7)
+
 
 /** 
  * The Raduino board is the size of a standard 16x2 LCD panel. It has three connectors:
@@ -93,8 +102,9 @@
  * We include the library and declare the configuration of the LCD panel too
  */
 
-#include <LiquidCrystal.h>
-LiquidCrystal lcd(8,9,10,11,12,13);
+
+#include <Adafruit_LiquidCrystal.h>
+Adafruit_LiquidCrystal lcd(0);
 
 /**
  * The Arduino, unlike C/C++ on a regular computer with gigabytes of RAM, has very little memory.
@@ -110,6 +120,15 @@ LiquidCrystal lcd(8,9,10,11,12,13);
 char c[30], b[30];      
 char printBuff[2][31];  //mirrors what is showing on the two lines of the display
 int count = 0;          //to generally count ticks, loops, etc
+long encPosition = 0;
+
+// 1250PPR
+// 10hz - 12.5khz/rot
+// 80hz - 100khz/rot
+// 800hz - 1mhz/rot
+int tuningStep = 10; // 10 Hz by default
+
+
 
 /** 
  *  The second set of 16 pins on the Raduino's bottom connector are have the three clock outputs and the digital lines to control the rig.
@@ -126,7 +145,12 @@ int count = 0;          //to generally count ticks, loops, etc
 #define TX_LPF_A (5)
 #define TX_LPF_B (4)
 #define TX_LPF_C (3)
-#define CW_KEY (2)
+#define CW_KEY (8)
+
+// I2C lcd mod frees up the rest of digital I/O pins
+// 10, 11, 12, 13 available
+
+// Encoder is using 2 (int) and 9
 
 /**
  * These are the indices where these user changable settinngs are stored  in the EEPROM
@@ -184,7 +208,7 @@ int count = 0;          //to generally count ticks, loops, etc
 char ritOn = 0;
 char vfoActive = VFO_A;
 int8_t meter_reading = 0; // a -1 on meter makes it invisible
-unsigned long vfoA=7150000L, vfoB=14200000L, sideTone=800, usbCarrier;
+unsigned long vfoA=7175000L, vfoB=14200000L, sideTone=800, usbCarrier;
 char isUsbVfoA=0, isUsbVfoB=1;
 unsigned long frequency, ritRxFrequency, ritTxFrequency;  //frequency is the current frequency on the dial
 unsigned long firstIF =   45005000L;
@@ -193,9 +217,6 @@ unsigned long firstIF =   45005000L;
 int cwSpeed = 100; //this is actuall the dot period in milliseconds
 extern int32_t calibration;
 byte cwDelayTime = 60;
-bool Iambic_Key = true;
-#define IAMBICB 0x10 // 0 for Iambic A, 1 for Iambic B
-unsigned char keyerControl = IAMBICB;
 
 
 /**
@@ -465,19 +486,113 @@ void checkButton(){
   int i, t1, t2, knob, new_knob;
 
   //only if the button is pressed
-  if (!btnDown())
+  if (!btnDown(FBUTTON))
     return;
   active_delay(50);
-  if (!btnDown()) //debounce
+  if (!btnDown(FBUTTON)) //debounce
     return;
  
   doMenu();
   //wait for the button to go up again
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(10);
   active_delay(50);//debounce
 }
 
+void doTuningStep() {
+  if (!btnDown(TU_STEP))
+    return;
+  
+    
+  switch(tuningStep) {
+    case 10:
+      tuningStep = 100;
+      break;
+    case 100:
+      tuningStep = 1000;
+      break;
+    case 1000:
+      tuningStep = 10;
+      break;
+    default:
+      break;
+  }
+  
+  while (btnDown(TU_STEP))
+    active_delay(10);
+  active_delay(50);//debounce
+  
+}
+
+void doBandUP() {
+  if (!btnDown(BAND_UP))
+    return;
+  long prev_freq = frequency;
+  
+  if (frequency < 7000000L) {
+    frequency = 7150000L;
+  } else if (frequency < 10000000L) {
+    frequency = 10100000L;
+  } else if (frequency < 14000000L) {
+    frequency = 14200000L;
+  } else if (frequency < 18000000L) {
+    frequency = 18068000L;
+  } else if (frequency < 21000000L) {
+    frequency = 21250000L;
+  } else if (frequency < 28000000L) {
+    frequency = 28500000L;
+  } else {
+    return;
+  }
+  
+  if (prev_freq < 10000000l && frequency > 10000000l)
+    isUSB = true;
+      
+  if (prev_freq > 10000000l && frequency < 10000000l)
+    isUSB = false;
+
+  setFrequency(frequency);
+  updateDisplay();
+  
+  while (btnDown(BAND_UP))
+    active_delay(10);
+  active_delay(50);//debounce 
+}
+
+void doBandDN() {
+  if (!btnDown(BAND_DN))
+    return;
+  long prev_freq = frequency;
+  
+  if (frequency >= 28000000L) {
+    frequency = 21250000L;
+  } else if (frequency >= 21000000L) {
+    frequency = 18068000L;
+  } else if (frequency >= 18000000L) {
+    frequency = 14200000L;
+  } else if (frequency >= 14000000L) {
+    frequency = 10100000L;
+  } else if (frequency >= 10000000L) {
+    frequency = 7150000L;
+  } else if  (frequency >= 7000000L) {
+    frequency = 3850000L;
+  } else {
+    return;
+  }
+  
+  if (prev_freq < 10000000l && frequency > 10000000l)
+    isUSB = true;
+      
+  if (prev_freq > 10000000l && frequency < 10000000l)
+    isUSB = false;
+
+  setFrequency(frequency);
+  updateDisplay();
+  
+  while (btnDown(BAND_DN))
+    active_delay(10);
+  active_delay(50);//debounce
+}
 
 /**
  * The tuning jumps by 50 Hz on each step when you tune slowly
@@ -488,25 +603,16 @@ void checkButton(){
 
 
 void doTuning(){
-  int s;
+  long s;
   unsigned long prev_freq;
 
-  s = enc_read();
-  if (s != 0){
+  s = encPosition/10;
+
+  if (s != 0) {
+    encPosition = 0;  // reset the counter now
     prev_freq = frequency;
 
-    if (s > 4)
-      frequency += 10000l;
-    else if (s > 2)
-      frequency += 500;
-    else if (s > 0)
-      frequency +=  50l;
-    else if (s > -2)
-      frequency -= 50l;
-    else if (s > -4)
-      frequency -= 500l;
-    else
-      frequency -= 10000l;
+    frequency += (s * tuningStep) ;
 
     if (prev_freq < 10000000l && frequency > 10000000l)
       isUSB = true;
@@ -557,9 +663,9 @@ void initSettings(){
   
   
   if (usbCarrier > 11060000l || usbCarrier < 11048000l)
-    usbCarrier = 11052000l;
+    usbCarrier = 11059000l;
   if (vfoA > 35000000l || 3500000l > vfoA)
-     vfoA = 7150000l;
+     vfoA = 7151000l;
   if (vfoB > 35000000l || 3500000l > vfoB)
      vfoB = 14150000l;  
   if (sideTone < 100 || 2000 < sideTone) 
@@ -605,32 +711,32 @@ void initSettings(){
 
   //set the current mode
   isUSB = isUsbVfoA;
-
-  /*
-   * The keyer type splits into two variables
-   */
-   EEPROM.get(CW_KEY_TYPE, x);
-
-   if (x == 0)
-    Iambic_Key = false;
-  else if (x == 1){
-    Iambic_Key = true;
-    keyerControl &= ~IAMBICB;
-  }
-  else if (x == 2){
-    Iambic_Key = true;
-    keyerControl |= IAMBICB;
-  }
   
+}
+
+void encISR() {
+  if (digitalRead(ENC_B)) {
+    encPosition--;
+  } else {
+    encPosition++;
+  }
 }
 
 void initPorts(){
 
   analogReference(DEFAULT);
 
-  //??
-  pinMode(ENC_A, INPUT_PULLUP);
-  pinMode(ENC_B, INPUT_PULLUP);
+  // new buttons
+  pinMode(BAND_UP, INPUT_PULLUP);
+  pinMode(BAND_DN, INPUT_PULLUP);
+  pinMode(TU_STEP, INPUT_PULLUP);
+
+  //encode external hw int on pin 2 and another on 9
+  pinMode(ENC_A, INPUT);
+  pinMode(ENC_B, INPUT);
+  attachInterrupt(0, encISR, RISING);
+
+  
   pinMode(FBUTTON, INPUT_PULLUP);
   
   //configure the function button to use the external pull-up
@@ -666,6 +772,7 @@ void setup()
 
   //we print this line so this shows up even if the raduino 
   //crashes later in the code
+  printLine1("K9SUL Kihwal Lee");
   printLine2("uBITX v5.1"); 
   //active_delay(500);
 
@@ -678,7 +785,7 @@ void setup()
   setFrequency(vfoA);
   updateDisplay();
 
-  if (btnDown())
+  if (btnDown(FBUTTON))
     factory_alignment();
 }
 
@@ -694,13 +801,18 @@ void loop(){
   if (!txCAT)
     checkPTT();
   checkButton();
+  
 
   //tune only when not tranmsitting 
   if (!inTx){
     if (ritOn)
       doRIT();
-    else 
+    else {
+      doTuningStep();
       doTuning();
+      doBandDN();
+      doBandUP();
+    }
   }
   
   //we check CAT after the encoder as it might put the radio into TX

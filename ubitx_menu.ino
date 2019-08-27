@@ -19,7 +19,7 @@ int getValueByKnob(int minimum, int maximum, int step_size,  int initial, char* 
     int knob = 0;
     int knob_value;
 
-    while (btnDown())
+    while (btnDown(FBUTTON))
       active_delay(100);
 
     active_delay(200);
@@ -32,7 +32,7 @@ int getValueByKnob(int minimum, int maximum, int step_size,  int initial, char* 
     printLine2(b);
     active_delay(300);
 
-    while(!btnDown() && digitalRead(PTT) == HIGH){
+    while(!btnDown(FBUTTON) && digitalRead(PTT) == HIGH){
 
       knob = enc_read();
       if (knob != 0){
@@ -70,12 +70,12 @@ int menuBand(int btn){
 
   printLine2("Band Select:");
   //wait for the button menu select button to be lifted)
-  while (btnDown())
+  while (btnDown(FBUTTON))
     active_delay(50);
   active_delay(50);    
   ritDisable();
 
-  while(!btnDown()){
+  while(!btnDown(FBUTTON)){
 
     knob = enc_read();
     if (knob != 0){
@@ -103,7 +103,7 @@ int menuBand(int btn){
     active_delay(20);
   }
 
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(50);
   active_delay(50);
   
@@ -247,63 +247,6 @@ void menuSplitToggle(int btn){
   }
 }
 
-int menuCWSpeed(int btn){
-    int knob = 0;
-    int wpm;
-
-    wpm = 1200/cwSpeed;
-     
-    if (!btn){
-     strcpy(b, "CW: ");
-     itoa(wpm,c, 10);
-     strcat(b, c);
-     strcat(b, " WPM     \x7E");
-     printLine2(b);
-     return;
-    }
-
-/*
-    printLine1("Press FN to Set");
-    strcpy(b, "5:CW>");
-    itoa(wpm,c, 10);
-    strcat(b, c);
-    strcat(b, " WPM");
-    printLine2(b);
-    active_delay(300);
-
-    while(!btnDown() && digitalRead(PTT) == HIGH){
-
-      knob = enc_read();
-      if (knob != 0){
-        if (wpm > 3 && knob < 0)
-          wpm--;
-        if (wpm < 50 && knob > 0)
-          wpm++;
-
-        strcpy(b, "5:CW>");
-        itoa(wpm,c, 10);
-        strcat(b, c);
-        strcat(b, " WPM");
-        printLine2(b);
-      }
-      //abort if this button is down
-      if (btnDown())
-        //re-enable the clock1 and clock 2
-        break;
-      checkCAT();
-    }
-  */
-    wpm = getValueByKnob(1, 100, 1,  wpm, "CW: ", " WPM>");
-  
-    printLine2("CW Speed set!");
-    cwSpeed = 1200/wpm;
-    EEPROM.put(CW_SPEED, cwSpeed);
-    active_delay(500);
-    
-    printLine2("");
-    updateDisplay();
-    menuOn = 0;
-}
 
 void menuExit(int btn){
 
@@ -339,7 +282,7 @@ int menuSetup(int btn){
       printLine2("Settings Off");      
     }
 
-   while(btnDown())
+   while(btnDown(FBUTTON))
     active_delay(100);
    active_delay(500);
    printLine2("");
@@ -358,7 +301,7 @@ int calibrateClock(){
 
 
   //keep clear of any previous button press
-  while (btnDown())
+  while (btnDown(FBUTTON))
     active_delay(100);
   active_delay(100);
    
@@ -381,7 +324,7 @@ int calibrateClock(){
   strcat(b, c);
   printLine2(b);     
 
-  while (!btnDown())
+  while (!btnDown(FBUTTON))
   {
 
     if (digitalRead(PTT) == LOW && !keyDown)
@@ -416,7 +359,7 @@ int calibrateClock(){
   setFrequency(frequency);    
   updateDisplay();
 
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(50);
   active_delay(100);
 }
@@ -470,7 +413,7 @@ void menuSetupCarrier(int btn){
   printCarrierFreq(usbCarrier);
 
   //disable all clock 1 and clock 2 
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     knob = enc_read();
 
     if (knob > 0)
@@ -513,7 +456,7 @@ void menuSetupCwTone(int btn){
   tone(CW_TONE, sideTone);
 
   //disable all clock 1 and clock 2 
-  while (digitalRead(PTT) == HIGH && !btnDown())
+  while (digitalRead(PTT) == HIGH && !btnDown(FBUTTON))
   {
     knob = enc_read();
 
@@ -566,70 +509,6 @@ void menuSetupCwDelay(int btn){
   menuOn = 0;
 }
 
-void menuSetupKeyer(int btn){
-  int tmp_key, knob;
-  
-  if (!btn){
-    if (!Iambic_Key)
-      printLine2("Setup:CW(Hand)\x7E");
-    else if (keyerControl & IAMBICB)
-      printLine2("Setup:CW(IambA)\x7E");
-    else 
-      printLine2("Setup:CW(IambB)\x7E");    
-    return;
-  }
-  
-  active_delay(500);
-
-  if (!Iambic_Key)
-    tmp_key = 0; //hand key
-  else if (keyerControl & IAMBICB)
-    tmp_key = 2; //Iambic B
-  else 
-    tmp_key = 1;
- 
-  while (!btnDown())
-  {
-    knob = enc_read();
-    if (knob < 0 && tmp_key > 0)
-      tmp_key--;
-    if (knob > 0)
-      tmp_key++;
-
-    if (tmp_key > 2)
-      tmp_key = 0;
-      
-    if (tmp_key == 0)
-      printLine1("Hand Key?");
-    else if (tmp_key == 1)
-      printLine1("Iambic A?");
-    else if (tmp_key == 2)  
-      printLine1("Iambic B?");  
-  }
-
-  active_delay(500);
-  if (tmp_key == 0)
-    Iambic_Key = false;
-  else if (tmp_key == 1){
-    Iambic_Key = true;
-    keyerControl &= ~IAMBICB;
-  }
-  else if (tmp_key == 2){
-    Iambic_Key = true;
-    keyerControl |= IAMBICB;
-  }
-  
-  EEPROM.put(CW_KEY_TYPE, tmp_key);
-  
-  printLine1("Keyer Set!");
-  active_delay(600);
-  printLine1("");
-
-  //Added KD8CEC
-  printLine2("");
-  updateDisplay(); 
-  menuOn = 0;  
-}
 
 void menuReadADC(int btn){
   int adc;
@@ -640,7 +519,7 @@ void menuReadADC(int btn){
   }
   delay(500);
 
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     adc = analogRead(ANALOG_KEYER);
     itoa(adc, b, 10);
     printLine1(b);
@@ -654,7 +533,7 @@ void doMenu(){
   int select=0, i,btnState;
 
   //wait for the button to be raised up
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(50);
   active_delay(50);  //debounce
   
@@ -662,7 +541,7 @@ void doMenu(){
   
   while (menuOn){
     i = enc_read();
-    btnState = btnDown();
+    btnState = btnDown(FBUTTON);
 
     if (i > 0){
       if (modeCalibrate && select + i < 150)
@@ -684,32 +563,27 @@ void doMenu(){
     else if (select < 50)
       menuSplitToggle(btnState);
     else if (select < 60)
-      menuCWSpeed(btnState);
-    else if (select < 70)
       select += menuSetup(btnState);
-    else if (select < 80 && !modeCalibrate)
+    else if (select < 70 && !modeCalibrate)
       menuExit(btnState);
-    else if (select < 90 && modeCalibrate)
+    else if (select < 80 && modeCalibrate)
       menuSetupCalibration(btnState);   //crystal
-    else if (select < 100 && modeCalibrate)
+    else if (select < 90 && modeCalibrate)
       menuSetupCarrier(btnState);       //lsb
-    else if (select < 110 && modeCalibrate)
+    else if (select < 100 && modeCalibrate)
       menuSetupCwTone(btnState);
-    else if (select < 120 && modeCalibrate)
+    else if (select < 110 && modeCalibrate)
       menuSetupCwDelay(btnState);
-    else if (select < 130 && modeCalibrate)
+    else if (select < 120 && modeCalibrate)
       menuReadADC(btnState);
-    else if (select < 140 && modeCalibrate)
-        menuSetupKeyer(btnState);
     else
       menuExit(btnState);  
   }
 
   //debounce the button
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(50);
   active_delay(50);
 
   checkCAT();
 }
-
