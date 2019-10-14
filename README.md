@@ -1,6 +1,5 @@
 # ubitx_v5
-Firmware for the version 5 of the ubitx
-Modified by K9SUL for the modified version.
+Firmware for the version 5 of the ubitx. Modified by K9SUL for the modified version.
 
 1. HW Changes:
 - Use of Adafruit i2c backpack for LCD, freed up I/O pins.
@@ -14,3 +13,4 @@ Modified by K9SUL for the modified version.
 - Split A/B removed (Not really useful. RIT can cover typical few kHz split QSOs).
 - Ham band only operation. Band limits are observed.
 - Removed dead code.
+- WWV/CHU menu

@@ -145,6 +145,47 @@ void menuSidebandToggle(int btn) {
     menuOn = 0;
   }
 }
+int standard_channel = 0;
+static int standards[8] = { 2500, 3330, 5000, 7850, 10000, 14670, 15000, 20000 };
+
+void set_standard(byte chan) {
+    setFrequency((unsigned long)standards[chan]*1000);
+    itoa(standards[chan], b, DEC);
+    strcat(b, " kHz");
+    printLine1(b);
+}
+
+void menu_standard(int btn) {
+  if (!btn) {
+    printLine2((char*)"Standard bcast");
+  } else {
+    while (btnDown(FBUTTON))
+      active_delay(50);
+    long original_freq = frequency;
+    set_standard(standard_channel);
+    // Enter the submenu
+    while(true) {
+      if (btnDown(FBUTTON)) {
+        while (btnDown(FBUTTON))
+          active_delay(50);
+        active_delay(50);
+        standard_channel++;
+        standard_channel %= 8;
+        set_standard(standard_channel);
+      }
+
+      if (btnDown(FLOCK)) {
+        while (btnDown(FLOCK))
+          active_delay(50);
+        active_delay(100);
+        setFrequency(original_freq);
+        updateDisplay();
+        menuOn = 0;
+        return;
+      }
+    }
+  }
+}
 
 void menuExit(int btn) {
 
@@ -153,6 +194,7 @@ void menuExit(int btn) {
   }
   else {
     printLine2((char*)"Exiting...");
+    setFrequency(frequency);
     active_delay(500);
     updateDisplay();
     menuOn = 0;
@@ -436,6 +478,8 @@ void doMenu() {
     if (btnDown(FLOCK)) {
       while (btnDown(FLOCK))
         active_delay(50);
+      if (!ritOn)
+        setFrequency(frequency);
       updateDisplay();
       menuOn = 0;
       return;
@@ -460,18 +504,20 @@ void doMenu() {
     else if (select < 40)
       menuSidebandToggle(btnState);
     else if (select < 50)
+      menu_standard(btnState);
+    else if (select < 60)
       select += menuSetup(btnState);
-    else if (select < 60 && !modeCalibrate)
+    else if (select < 70 && !modeCalibrate)
       menuExit(btnState);
-    else if (select < 70 && modeCalibrate)
-      menuSetupCalibration(btnState);   //crystal
     else if (select < 80 && modeCalibrate)
-      menuSetupCarrier(btnState);       //lsb
+      menuSetupCalibration(btnState);   //crystal
     else if (select < 90 && modeCalibrate)
-      menuSetupCwTone(btnState);
+      menuSetupCarrier(btnState);       //lsb
     else if (select < 100 && modeCalibrate)
-      menuSetupCwDelay(btnState);
+      menuSetupCwTone(btnState);
     else if (select < 110 && modeCalibrate)
+      menuSetupCwDelay(btnState);
+    else if (select < 120 && modeCalibrate)
       menuReadADC(btnState);
     else
       menuExit(btnState);
@@ -481,6 +527,7 @@ void doMenu() {
   while (btnDown(FBUTTON))
     active_delay(50);
   active_delay(50);
+  enc1.write(0);
 
   checkCAT();
 }
