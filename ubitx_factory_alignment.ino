@@ -4,9 +4,9 @@
  */
 
 void btnWaitForClick(){
-  while(!btnDown())
+  while(!btnDown(FBUTTON))
     active_delay(50);
-  while(btnDown())
+  while(btnDown(FBUTTON))
     active_delay(50);
  active_delay(50);
 }
@@ -27,66 +27,66 @@ void factory_alignment(){
   calibrateClock();
 
   if (calibration == 0){
-    printLine2("Setup Aborted");
+    printLine2((char*)"Setup Aborted");
     return;
   }
 
   //move it away to 7.160 for an LSB signal
   setFrequency(7170000l);
   updateDisplay();
-  printLine2("#2 BFO");
+  printLine2((char*)"#2 BFO");
   active_delay(1000);
 
   usbCarrier = 11053000l;
   menuSetupCarrier(1);
 
   if (usbCarrier == 11994999l){
-    printLine2("Setup Aborted");
+    printLine2((char*)"Setup Aborted");
     return;
   }
   
-  printLine2("#3:Test 3.5MHz");
+  printLine2((char*)"#3:Test 3.5MHz");
   isUSB = false;
   setFrequency(3500000l);
   updateDisplay();
 
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
 
   btnWaitForClick();
-  printLine2("#4:Test 7MHz");
+  printLine2((char*)"#4:Test 7MHz");
 
   setFrequency(7150000l);
   updateDisplay();
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
 
   btnWaitForClick();
-  printLine2("#5:Test 14MHz");
+  printLine2((char*)"#5:Test 14MHz");
 
   isUSB = true;
   setFrequency(14000000l);
   updateDisplay();
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
 
   btnWaitForClick();
-  printLine2("#6:Test 28MHz");
+  printLine2((char*)"#6:Test 28MHz");
 
   setFrequency(28000000l);
   updateDisplay();
-  while (!btnDown()){
+  while (!btnDown(FBUTTON)){
     checkPTT();
     active_delay(100);
   }
 
-  printLine2("Alignment done");
+  printLine2((char*)"Alignment done");
   active_delay(1000);
 
   isUSB = false;
@@ -94,4 +94,3 @@ void factory_alignment(){
   updateDisplay();  
   
 }
-

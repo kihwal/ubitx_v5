@@ -202,13 +202,6 @@ void catReadEEPRom(void)
       cat[0] = cwDelayTime;
       cat[1] = 0x32;
       break;
-    case 0x62 : //
-      //5-0  CW Speed (4-60 WPM) (#21) From 0 to 38 (HEX) with 0 = 4 WPM and 38 = 60 WPM (1 WPM steps)
-      //7-6  Batt-Chg (6/8/10 Hours (#11)  00 = 6 Hours, 01 = 8 Hours, 10 = 10 Hours
-      //CAT_BUFF[0] = 0x08;
-      cat[0] = 1200 / cwSpeed - 4;
-      cat[1] = 0xB2;
-      break;
     case 0x63 : //
       //6-0  VOX Gain (#51)  Contains 1-100 (decimal) as displayed
       //7  Disable AM/FM Dial (#4) 0 = Enable, 1 = Disable
@@ -248,7 +241,7 @@ void catReadEEPRom(void)
       //7A  6 ? ?
       //7A  7 SPL On/Off  0 = Off, 1 = On
 
-      cat[0] = (splitOn ? 0xFF : 0x7F);
+      cat[0] = 0x7F;
       break;
     case 0xB3 : //
       cat[0] = 0x00;
@@ -280,15 +273,6 @@ void processCATCommand2(byte* cmd) {
     Serial.write(response, 1);
     //sprintf(b, "set:%ld", f); 
     //printLine2(b);
-    break;
-
-  case 0x02:
-    //split on 
-    splitOn =  1;
-    break;
-  case 0x82:
-    //split off
-    splitOn = 0;
     break;
     
   case 0x03:
@@ -437,5 +421,3 @@ void checkCAT(){
   processCATCommand2(cat);
   insideCat = 0;
 }
-
-
