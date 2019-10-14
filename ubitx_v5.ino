@@ -106,18 +106,10 @@
 #define VFO_A 16
 #define VFO_B 20
 #define CW_SIDETONE 24
-
 // Each of 10 bands has its own last-used frequency.  
 #define UBITX_BAND_FREQ_BASE 40
 // 4 x 10 bytes starting from offset 40. 
 #define NEXT_AVAILABLE_OFFSET 44
-
-//values that are stroed for the VFO modes
-#define VFO_MODE_LSB 2
-#define VFO_MODE_USB 3
-
-// handkey, iambic a, iambic b : 0,1,2f
-#define CW_KEY_TYPE 358
 
 #define INIT_USB_FREQ   (11059200l)
 
@@ -125,6 +117,7 @@
 //these are the parameter passed to startTx
 #define TX_SSB 0
 #define TX_CW 1
+#define FIRST_IF 45005000L
 
 // Two main I/O devices
 Adafruit_LiquidCrystal lcd(0); // LCD connected through an i2c backpack
@@ -149,7 +142,6 @@ char ritOn = 0;
 char vfoActive = VFO_A;
 unsigned long vfoA=7175000L, vfoB=14200000L, sideTone=800, usbCarrier;
 unsigned long frequency, ritRxFrequency, ritTxFrequency;  //frequency is the current frequency on the dial
-unsigned long firstIF =   45005000L;
 
 //these are variables that control the keyer behaviour
 extern int32_t calibration;
@@ -303,32 +295,6 @@ void setTXFilters(unsigned long freq){
   }
 }
 
-
-void setTXFilters_v5(unsigned long freq){
-  
-  if (freq > 21000000L){  // the default filter is with 35 MHz cut-off
-    digitalWrite(TX_LPF_A, 0);
-    digitalWrite(TX_LPF_B, 0);
-    digitalWrite(TX_LPF_C, 0);
-  }
-  else if (freq >= 14000000L){ //thrown the KT1 relay on, the 30 MHz LPF is bypassed and the 14-18 MHz LPF is allowd to go through
-    digitalWrite(TX_LPF_A, 1);
-    digitalWrite(TX_LPF_B, 0);
-    digitalWrite(TX_LPF_C, 0);
-  }
-  else if (freq > 7000000L){
-    digitalWrite(TX_LPF_A, 0);
-    digitalWrite(TX_LPF_B, 1);
-    digitalWrite(TX_LPF_C, 0);    
-  }
-  else {
-    digitalWrite(TX_LPF_A, 0);
-    digitalWrite(TX_LPF_B, 0);
-    digitalWrite(TX_LPF_C, 1);    
-  }
-}
-
-
 /**
  * This is the most frequently called function that configures the 
  * radio to a particular frequeny, sideband and sets up the transmit filters
@@ -347,12 +313,12 @@ void setFrequency(unsigned long f){
  
   setTXFilters(f);
   if (isUSB){
-    si5351bx_setfreq(2, firstIF  + f);
-    si5351bx_setfreq(1, firstIF + usbCarrier);
+    si5351bx_setfreq(2, FIRST_IF  + f);
+    si5351bx_setfreq(1, FIRST_IF + usbCarrier);
   }
   else{
-    si5351bx_setfreq(2, firstIF + f);
-    si5351bx_setfreq(1, firstIF - usbCarrier);
+    si5351bx_setfreq(2, FIRST_IF + f);
+    si5351bx_setfreq(1, FIRST_IF - usbCarrier);
   }
     
   frequency = f;
@@ -678,7 +644,6 @@ void setup()
  * The loop checks for keydown, ptt, function button and tuning.
  */
 
-byte flasher = 0;
 void loop(){ 
   cwKeyer(); 
   if (!txCAT)
@@ -686,9 +651,8 @@ void loop(){
   checkFlock();
   if (!locked)
     checkButton();
-  
-
-  //tune only when not tranmsitting 
+ 
+  //tune only when not tranmsitting and not locked.
   if (!inTx && !locked){
     if (ritOn)
       doRIT();
